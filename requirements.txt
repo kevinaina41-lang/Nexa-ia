@@ -12,3 +12,4 @@ python-pptx
 reportlab
 duckduckgo-search
 requests
+PyPDF2
