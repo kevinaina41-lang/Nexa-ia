@@ -8,7 +8,6 @@ load_dotenv()
 
 app = FastAPI()
 
-# Autoriser les requêtes depuis n'importe quel site
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -25,11 +24,20 @@ def racine():
 @app.post("/chat")
 def chat(data: dict):
     message = data.get("message", "")
+    historique = data.get("historique", [])
+
+    messages = [
+        {"role": "system", "content": "Tu es Nexa AI, l'assistant intelligent créé par Nexora, fondée par Randriafenosoa Mamiratiniaina Kevin. Tu réponds TOUJOURS dans la même langue que l'utilisateur. Tu te souviens de toute la conversation. Tu ne mentionnes jamais OpenAI ni ChatGPT."}
+    ]
+
+    for msg in historique[-20:]:
+        role = "user" if msg["type"] == "user" else "assistant"
+        messages.append({"role": role, "content": msg["texte"]})
+
+    messages.append({"role": "user", "content": message})
+
     response = client.chat.completions.create(
-        messages=[
-            {"role": "system", "content": "Tu es Nexa AI, l'assistant intelligent créé par Nexora, fondée par Randriafenosoa Mamiratiniaina Kevin. Tu réponds TOUJOURS dans la même langue que l'utilisateur. Tu ne mentionnes jamais OpenAI ni ChatGPT."},
-            {"role": "user", "content": message},
-        ],
+        messages=messages,
         model="openai/gpt-oss-120b",
     )
     return {"reply": response.choices[0].message.content}
