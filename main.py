@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from groq import Groq
 from dotenv import load_dotenv
 import os
+import json
+import re
 
 load_dotenv()
 
@@ -16,13 +18,6 @@ app.add_middleware(
 )
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-
-PERSONAS = {
-    "mentor": "Tu es un mentor bienveillant qui guide l'étudiant avec patience.",
-    "ami": "Tu es un ami proche, tu parles de façon décontractée et amicale.",
-    "prof": "Tu es un professeur strict mais juste, tu expliques clairement.",
-    "coach": "Tu es un coach motivant, tu encourages et pousses à la réussite."
-}
 
 BASE_PROMPT = "Tu es Nexa AI, l'assistant intelligent créé par Nexora, fondée par Randriafenosoa Mamiratiniaina Kevin. Tu réponds TOUJOURS dans la même langue que l'utilisateur. Tu ne mentionnes jamais OpenAI ni ChatGPT."
 
@@ -48,8 +43,6 @@ def chat(data: dict):
     system = BASE_PROMPT
     if persona:
         system += f" Comportement souhaité : {persona}."
-    else:
-        system += " " + PERSONAS.get("mentor", "")
 
     messages = [{"role": "system", "content": system}]
     for msg in historique[-20:]:
@@ -66,21 +59,32 @@ def chat(data: dict):
 @app.post("/quiz")
 def quiz(data: dict):
     sujet = data.get("sujet", "")
-    niveau = data.get("niveau", "")
     nb = data.get("nb", 5)
+    
     prompt = f"""Crée un quiz de {nb} questions à choix multiples (QCM) sur le sujet : {sujet}.
-Niveau : {niveau}.
 
-Format STRICT :
-Question 1 : [question]
-A) [réponse]
-B) [réponse]
-C) [réponse]
-D) [réponse]
-Réponse correcte : [lettre]
+FORMAT STRICT (respecte exactement ce format) :
 
-(et ainsi de suite)"""
-    return {"reply": demander(prompt, "Tu es un professeur qui crée des quiz pédagogiques.")}
+Question 1 : [ta question]
+A) [option 1]
+B) [option 2]
+C) [option 3]
+D) [option 4]
+Réponse correcte : [A, B, C ou D]
+
+Question 2 : [ta question]
+A) [option 1]
+B) [option 2]
+C) [option 3]
+D) [option 4]
+Réponse correcte : [A, B, C ou D]
+
+(continue jusqu'à {nb} questions)
+
+Ne mets AUCUN autre texte. Juste les questions et les options."""
+    
+    contenu = demander(prompt, "Tu es un professeur qui crée des quiz QCM. Tu respectes STRICTEMENT le format demandé.")
+    return {"reply": contenu, "quiz": contenu}
 
 @app.post("/fiche")
 def fiche(data: dict):
@@ -89,37 +93,30 @@ def fiche(data: dict):
 
 Structure :
 1. Introduction
-2. Points clés (avec titres)
+2. Points clés
 3. Définitions importantes
 4. Exemples
 5. À retenir
 
-Format clair, aéré, facile à réviser."""
-    return {"reply": demander(prompt, "Tu es un professeur qui crée des fiches de révision claires.")}
+Format clair, aéré."""
+    return {"reply": demander(prompt, "Tu es un professeur qui crée des fiches de révision.")}
 
 @app.post("/cv")
 def cv(data: dict):
-    nom = data.get("nom", "")
-    age = data.get("age", "")
-    formation = data.get("formation", "")
-    experience = data.get("experience", "")
-    competences = data.get("competences", "")
-    prompt = f"""Crée un CV professionnel moderne pour :
-Nom : {nom}
-Âge : {age}
-Formation : {formation}
-Expérience : {experience}
-Compétences : {competences}
+    infos = data.get("infos", "")
+    prompt = f"""Crée un CV professionnel moderne basé sur ces informations :
+
+{infos}
 
 Format :
-- En-tête (nom, âge)
-- Profil / Accroche
+- En-tête
+- Profil
 - Formation
 - Expérience
 - Compétences
 - Langues
 
-Ton professionnel et personnalisé."""
+Ton professionnel."""
     return {"reply": demander(prompt, "Tu es un expert en recrutement.")}
 
 @app.post("/corriger")
@@ -132,7 +129,7 @@ def corriger(data: dict):
 Donne :
 1. Les fautes d'orthographe
 2. Les fautes de grammaire
-3. Les améliorations possibles
+3. Les améliorations
 4. Une note sur 20
 5. Un commentaire encourageant"""
     return {"reply": demander(prompt, "Tu es un professeur qui corrige avec bienveillance.")}
