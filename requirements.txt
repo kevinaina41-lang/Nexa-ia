@@ -2,3 +2,13 @@ fastapi
 uvicorn
 groq
 python-dotenv
+fastapi
+uvicorn
+groq
+python-dotenv
+python-docx
+openpyxl
+python-pptx
+reportlab
+duckduckgo-search
+requests
